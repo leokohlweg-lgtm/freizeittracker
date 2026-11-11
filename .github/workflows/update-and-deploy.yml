@@ -1,0 +1,57 @@
+name: Wöchentliches Preis-Update & Veröffentlichung
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"      # jeden Montag 03:00 UTC
+  workflow_dispatch:          # manuell: Actions -> "Run workflow"
+  push:
+    branches: [main]          # App-Änderungen sofort veröffentlichen
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: freizeittracker
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PDF-Unterstützung installieren
+        run: pip install -r requirements.txt
+      - name: Partner abgleichen und Preise recherchieren
+        run: python -m server.cli build-static
+      - name: Neuen Katalog speichern
+        run: |
+          git config user.name "freizeittracker-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/data/catalog.json
+          git commit -m "Preis-Update $(date -u +%Y-%m-%d)" || echo "Keine Änderungen"
+          git push
+
+  deploy:
+    needs: update
+    if: always() && (needs.update.result == 'success' || needs.update.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - id: deployment
+        uses: actions/deploy-pages@v4
