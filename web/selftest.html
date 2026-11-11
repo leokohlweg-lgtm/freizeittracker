@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FreizeitTracker Selbsttest</title>
+  <style>
+    :root { color-scheme: light dark; --ok: #1a8f43; --bad: #d62d20; }
+    body { font: 15px/1.45 -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 20px 16px; background: Canvas; color: CanvasText; max-width: 760px; margin: auto; }
+    h1 { font-size: 22px; }
+    li { margin: 3px 0; }
+    .ok { color: var(--ok); } .bad { color: var(--bad); font-weight: 700; }
+    #sum { font-weight: 700; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <h1>FreizeitTracker – Selbsttest der Rechenlogik</h1>
+  <p>Prüft Kategorie, Preisauswahl, Ersparnis, Doppelschutz, Amortisation und Sicherung. Arbeitet in einem eigenen Testspeicher.</p>
+  <p id="sum">läuft …</p>
+  <ol id="out"></ol>
+  <script type="module" src="js/local/selftest.js"></script>
+</body>
+</html>
