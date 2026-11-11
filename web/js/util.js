@@ -164,16 +164,34 @@ export function openSheet(html, { onClose } = {}) {
 export const closeAllSheets = () => [...sheetStack].forEach((s) => s.close());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && sheetStack.length) sheetStack[sheetStack.length - 1].close(); });
 
-export function countUp(el, to, { dur = 1100, fmt = fmtNum } = {}) {
+// Inhalte einer Ansicht nacheinander einblenden
+export function stagger(root) {
+  if (!root) return;
+  let i = 0;
+  const mark = (el) => { if (el && !el.classList.contains("stagger-item")) { el.classList.add("stagger-item"); el.style.setProperty("--i", Math.min(i++, 14)); } };
+  const walk = (box) => {
+    for (const ch of box.children) {
+      if (ch.matches(".kpis, .quick, .hl-grid")) [...ch.children].forEach(mark);
+      else if (ch.matches(".section") || /-body$/.test(ch.id)) walk(ch);
+      else mark(ch);
+    }
+  };
+  walk(root);
+}
+
+export const haptic = (ms = 12) => { try { navigator.vibrate?.(ms); } catch { /* iOS: keine Vibration */ } };
+
+export function countUp(el, to, { dur = 1100, fmt = fmtNum, from = 0 } = {}) {
   if (!el) return;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const from = 0, t0 = performance.now();
-  if (reduce || !to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now();
+  if (reduce || !to || from === to) { el.textContent = fmt(to); return; }
   const tick = (t) => {
     const p = Math.min(1, (t - t0) / dur);
     const e = 1 - Math.pow(1 - p, 3);
     el.textContent = fmt(from + (to - from) * e);
     if (p < 1) requestAnimationFrame(tick);
+    else { const b = el.closest(".amount") || el; b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); }
   };
   requestAnimationFrame(tick);
 }

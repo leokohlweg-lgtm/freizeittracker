@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { S, activeSeason, go, loadFacilities } from "../state.js";
 import { ring, animateRings } from "../charts.js";
 import { openSearch, openVisitSheet } from "../sheets.js";
-import { esc, fmtEUR, fmtNum, fmtSigned, fmtDate, relDate, catIcon, I, countUp, seasonLabel, CAT, cat } from "../util.js";
+import { esc, fmtEUR, fmtNum, fmtSigned, fmtDate, relDate, catIcon, I, countUp, seasonLabel, CAT, cat, store } from "../util.js";
 
 export function visitRow(v) {
   return `<button class="item" data-vid="${v.id}">${catIcon(v.category)}<div class="grow"><div class="t ellipsis">${esc(v.facility_name)}</div>
@@ -30,13 +30,14 @@ export async function renderHome(root) {
       <button class="avatar" id="h-av" aria-label="Profil">${esc((u.first_name[0] || "") + (u.last_name[0] || ""))}</button></div></div>
     ${st.__offline ? `<div class="warn" style="margin-bottom:12px">${I.warn()}<div>Offline – angezeigt werden die zuletzt synchronisierten Daten.</div></div>` : ""}
     <section class="hero" aria-label="Deine Gesamtersparnis">
+      <div class="hero-bg" aria-hidden="true"></div>
       <div class="hero-row"><div class="grow">
         <div class="label">Deine Gesamtersparnis</div>
         <div class="amount num"><span id="h-amt">0,00</span><span class="cur">€</span></div>
         <div class="sub">Bruttoersparnis · ${st.visits} Besuch${st.visits === 1 ? "" : "e"} · Saison ${esc(st.season.label)}</div>
         ${amort ? `<div class="badge-amort">🎉 Amortisiert am ${esc(fmtDate(st.amortized_on))}</div>` : ""}
       </div>
-      <div class="ring-wrap">${ring(st.progress_raw)}<div class="ring-label"><div>${pct}%<small>AMORTISIERT</small></div></div></div></div>
+      <div class="ring-wrap ${amort ? "done" : ""}">${ring(st.progress_raw)}<div class="ring-label"><div>${pct}%<small>AMORTISIERT</small></div></div></div></div>
       <div class="bar"><i id="h-bar"></i></div>
       <div class="bar-legend"><span>0 €</span><span>Ticketpreis ${esc(fmtEUR(st.purchase_price, true))}</span></div>
     </section>
@@ -67,7 +68,11 @@ export async function renderHome(root) {
     <div class="chips" style="margin:0 -16px 10px" id="h-cats"></div>
     <button class="searchbar" id="h-search">${I.search(20)}<span class="ph">Was hast du besucht?</span><span class="plus">${I.plus(18)}</span></button>
   </div></div>`;
-  countUp(root.querySelector("#h-amt"), st.gross);
+  // von der zuletzt gesehenen Ersparnis hochzählen (nach einem neuen Besuch sieht man den Zuwachs)
+  const seenKey = "seen-gross:" + st.season.id;
+  const prev = store.get(seenKey, 0);
+  countUp(root.querySelector("#h-amt"), st.gross, { from: prev > st.gross ? 0 : prev, dur: prev && prev !== st.gross ? 1400 : 1100 });
+  store.set(seenKey, st.gross);
   animateRings(root);
   requestAnimationFrame(() => setTimeout(() => (root.querySelector("#h-bar").style.width = Math.min(100, pct) + "%"), 40));
   root.querySelector("#h-av").onclick = () => go("#/profile");

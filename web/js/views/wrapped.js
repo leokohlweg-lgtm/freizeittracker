@@ -47,7 +47,7 @@ export async function renderWrapped(root, sid) {
     } else {
       content = `<div class="w-k">${esc(s.title)}</div><div class="w-v" style="font-size:clamp(34px,10vw,60px)">${esc(s.value ?? "")}</div><div class="w-t">${esc(s.text || "")}</div>`;
     }
-    el.innerHTML = `<div class="bars">${w.slides.map((_, j) => `<i class="${j < i ? "done" : j === i ? "cur" : ""}"><b></b></i>`).join("")}</div>
+    el.innerHTML = `<div class="w-bg" aria-hidden="true"></div><div class="bars">${w.slides.map((_, j) => `<i class="${j < i ? "done" : j === i ? "cur" : ""}"><b></b></i>`).join("")}</div>
       <button class="w-close" aria-label="Schließen">${I.close(20)}</button>
       ${w.preview && i === 0 ? `<div style="text-align:center;font-size:12px;opacity:.8;margin-top:10px">Vorschau – die Saison läuft noch</div>` : ""}
       <div class="w-tap" style="left:0" data-dir="-1"></div><div class="w-tap" style="right:0" data-dir="1"></div>

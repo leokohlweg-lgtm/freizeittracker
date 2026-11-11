@@ -7,8 +7,8 @@ const draft = { step: 0, first_name: "", last_name: "", birth_date: "", disabili
 
 export function renderWelcome(root) {
   root.innerHTML = `<div class="onb">
-    <div class="spacer"></div>
-    <div class="logo">⛰️</div>
+    <img class="onb-illu" src="img/welcome.webp" alt="" aria-hidden="true">
+    <div class="logo hidden" id="w-logo">⛰️</div>
     <h1>Wie viel spart dein Freizeitticket wirklich?</h1>
     <p class="lead">FreizeitTracker kennt alle Partner des Freizeittickets Tirol, recherchiert die regulären Eintrittspreise und rechnet automatisch mit, wie viel du sparst.</p>
     <div class="stack" style="margin-bottom:12px">
@@ -20,6 +20,9 @@ export function renderWelcome(root) {
     <button class="btn block" style="margin-top:10px" id="w-login">Sicherung wiederherstellen</button>
     <p class="tiny muted center" style="margin-top:16px">Deine Daten bleiben nur auf diesem Gerät. Unabhängiges Projekt, kein offizielles Angebot des Freizeitticket Tirol. Preise stammen aus öffentlichen Quellen.</p>
   </div>`;
+  // ohne Bild (z. B. noch nicht geladen/offline) das bisherige Logo zeigen
+  const illu = root.querySelector(".onb-illu");
+  illu.onerror = () => { illu.remove(); root.querySelector("#w-logo").classList.remove("hidden"); };
   root.querySelector("#w-reg").onclick = () => go("#/register");
   root.querySelector("#w-login").onclick = () => go("#/login");
 }

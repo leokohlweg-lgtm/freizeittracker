@@ -49,8 +49,8 @@ export function areaChart(points, { threshold = null, start, end, height = 190 }
     ${[0.25, 0.5, 0.75].map((f) => `<line class="grid" x1="0" x2="${W}" y1="${y(maxY * f)}" y2="${y(maxY * f)}"/>`).join("")}
     ${months.map((m) => `<text x="${m.x + 2}" y="${H - 6}">${m.l}</text>`).join("")}
     ${threshold ? `<line class="thr" x1="0" x2="${W}" y1="${y(threshold)}" y2="${y(threshold)}"/><text class="thr-label" x="${W - 4}" y="${y(threshold) - 5}" text-anchor="end">Ticketpreis ${esc(fmtEUR(threshold, true))}</text>` : ""}
-    <path d="${area}" fill="url(#${id})"/>
-    <path d="${d}" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <path class="fade-area" d="${area}" fill="url(#${id})"/>
+    <path class="draw-line" pathLength="1" d="${d}" fill="none" stroke="#34c759" stroke-width="2.5" stroke-linejoin="round"/>
     ${tx > pl && tx < W ? `<line x1="${tx}" x2="${tx}" y1="${pt}" y2="${H - pb}" stroke="var(--text-3)" stroke-dasharray="2 3"/>` : ""}
     ${cross ? `<circle cx="${x(cross.date)}" cy="${y(cross.cum)}" r="5" fill="#ff9f0a" stroke="var(--surface)" stroke-width="2"/>` : ""}
     <circle cx="${x(last.date)}" cy="${y(last.cum)}" r="4.5" fill="#34c759" stroke="var(--surface)" stroke-width="2"/>
@@ -87,7 +87,7 @@ export function donut(items, { size = 140, stroke = 22 } = {}) {
     off += len;
     return s;
   }).join("");
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
+  return `<svg class="donut-anim" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--surface-2)" stroke-width="${stroke}"/>${segs}</svg>`;
 }
 

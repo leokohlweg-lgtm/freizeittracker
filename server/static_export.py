@@ -46,7 +46,7 @@ def export_catalog(path=CATALOG):
         "history": [{k: t.get(k) for k in TAR_FIELDS} for t in
                     db.q("SELECT * FROM tariffs WHERE archived_at IS NOT NULL AND archived_at >= ? ORDER BY facility_id, archived_at DESC", (cutoff,))],
         "log": db.q("SELECT at, kind, facility_id, message FROM sync_log ORDER BY id DESC LIMIT 150"),
-        "jobs": db.q("SELECT name, last_run_at, last_finished_at, last_status, last_message FROM jobs"),
+        "jobs": db.q("SELECT name, last_run_at, last_finished_at, last_status, last_message FROM jobs WHERE name IN ('partner_sync','price_crawl')"),
     }
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".tmp"
@@ -81,7 +81,7 @@ def restore_catalog(path=CATALOG):
             c.execute(f"INSERT OR REPLACE INTO tariffs({','.join(cols)}) VALUES({','.join('?' * len(cols))})", [t[k] for k in cols])
         for l in reversed(cat.get("log", [])):
             c.execute("INSERT INTO sync_log(at,kind,facility_id,message) VALUES(?,?,?,?)", (l["at"], l["kind"], l.get("facility_id"), l["message"]))
-        for j in cat.get("jobs", []):
+        for j in [j for j in cat.get("jobs", []) if j["name"] in ("partner_sync", "price_crawl")]:
             c.execute("INSERT OR REPLACE INTO jobs(name,last_run_at,last_finished_at,last_status,last_message,running) VALUES(?,?,?,?,?,0)",
                       (j["name"], j["last_run_at"], j["last_finished_at"], j["last_status"], j["last_message"]))
     return len(cat["facilities"])

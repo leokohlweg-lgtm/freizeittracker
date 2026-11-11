@@ -1,7 +1,7 @@
 // FreizeitTracker – Einstieg, Routing, Navigation (läuft komplett auf dem Gerät)
 import { S, refreshUser, applyTheme, loadFacilities } from "./state.js";
 import { loadCatalog, hasProfile, requestPersist } from "./local/local.js";
-import { I, esc, toast, closeAllSheets, fmtDate } from "./util.js";
+import { I, esc, toast, closeAllSheets, fmtDate, stagger } from "./util.js";
 import { renderWelcome, renderLogin, renderRegister } from "./views/onboarding.js";
 import { renderHome } from "./views/home.js";
 import { renderVisits } from "./views/visits.js";
@@ -49,23 +49,28 @@ async function route() {
     if (isNew) setTimeout(() => toast(`Willkommen, ${S.user.first_name}! 🎉`), 400);
   };
   try {
-    switch (path) {
-      case "welcome": hideTabbar(); return renderWelcome(app);
-      case "login": hideTabbar(); return renderLogin(app, authed);
-      case "register": hideTabbar(); return await renderRegister(app, authed);
-      case "visits": tabbar("visits"); return await renderVisits(app);
-      case "stats": tabbar("stats"); return await renderStats(app, sub);
-      case "profile": tabbar("profile"); return await renderProfile(app);
-      case "review": tabbar("profile"); return await renderReview(app);
-      case "map": tabbar("home"); return await renderMap(app);
-      case "wrapped": hideTabbar(); return await renderWrapped(app, sub);
-      default: tabbar("home"); return await renderHome(app);
-    }
+    await renderRoute(path, sub, authed);
+    stagger(app.querySelector(".view"));
   } catch (e) {
     console.error(e);
     if (e.status === 401) { S.user = null; location.replace("#/welcome"); return; }
     app.innerHTML = `<div class="view"><div class="card empty"><div class="big">⚠️</div>${esc(e.message || "Unerwarteter Fehler")}<br><button class="btn small" style="margin-top:12px" id="reload-btn">Neu laden</button></div></div>`;
     app.querySelector("#reload-btn").onclick = () => location.reload();
+  }
+}
+
+async function renderRoute(path, sub, authed) {
+  switch (path) {
+    case "welcome": hideTabbar(); return renderWelcome(app);
+    case "login": hideTabbar(); return renderLogin(app, authed);
+    case "register": hideTabbar(); return await renderRegister(app, authed);
+    case "visits": tabbar("visits"); return await renderVisits(app);
+    case "stats": tabbar("stats"); return await renderStats(app, sub);
+    case "profile": tabbar("profile"); return await renderProfile(app);
+    case "review": tabbar("profile"); return await renderReview(app);
+    case "map": tabbar("home"); return await renderMap(app);
+    case "wrapped": hideTabbar(); return await renderWrapped(app, sub);
+    default: tabbar("home"); return await renderHome(app);
   }
 }
 

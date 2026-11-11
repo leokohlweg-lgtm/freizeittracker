@@ -3,7 +3,7 @@ import { api } from "./api.js";
 import { S, loadFacilities, invalidate, go, refreshUser } from "./state.js";
 import {
   esc, fmtEUR, fmtDate, relDate, todayISO, addDays, norm, debounce, uid, cat, catIcon, I, CAT, SEARCH_ALIASES,
-  openSheet, toast, dialog, confirmDlg, confetti, seasonLabel,
+  openSheet, toast, dialog, confirmDlg, confetti, seasonLabel, haptic,
 } from "./util.js";
 
 // ------------------------------------------------------------ Suche
@@ -280,6 +280,11 @@ export function openVisitSheet({ facility, visit = null, date = null, onDone = n
       if (!visit && unavailable && st.savePrice && body.regular_price) {
         api(`/api/facilities/${facility.id}/tariffs`, { method: "POST", body: { price: body.regular_price, label: "Von dir ergänzt", ticket_type: st.ticket_type, age_group: "alle" } }).catch(() => {});
       }
+      // kurzes Erfolgs-Feedback im Button, dann schließen
+      const btn = sheet.body.querySelector("#v-save");
+      if (btn) { btn.classList.add("saved"); btn.innerHTML = `${I.check(22)} Gespeichert`; }
+      haptic(15);
+      await new Promise((r) => setTimeout(r, 520));
       sheet.close();
       toast(visit ? "Besuch aktualisiert" : `+${fmtEUR(v.saving)} gespart`);
       if (v.amortized_now) {
