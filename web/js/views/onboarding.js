@@ -3,11 +3,20 @@ import { api } from "../api.js";
 import { S, go } from "../state.js";
 import { esc, fmtEUR, seasonLabel, todayISO, seasonOf, toast } from "../util.js";
 import { trackEvent } from "../analytics.js";
+import { listTickets, cancelNewTicket } from "../local/local.js";
 
 const draft = { step: 0, first_name: "", last_name: "", birth_date: "", disability: false, season_id: null, purchase_price: "" };
+// für ein weiteres Ticket mit leerem Formular beginnen
+export function resetRegistration() { Object.assign(draft, { step: 0, first_name: "", last_name: "", birth_date: "", disability: false, season_id: null, purchase_price: "" }); }
+// Wird gerade ein zusätzliches Ticket angelegt? Dann darf man abbrechen.
+const addingExtra = () => listTickets().some((t) => !t.active && t.has_profile);
+async function cancelExtra() {
+  if (cancelNewTicket()) { S.user = (await api("/api/me")).user; resetRegistration(); go("#/home"); }
+}
 
 export function renderWelcome(root) {
   root.innerHTML = `<div class="onb">
+    ${addingExtra() ? `<button class="link-btn" id="w-cancel" style="align-self:flex-start;margin-bottom:8px">‹ Abbrechen</button>` : ""}
     <img class="onb-illu" src="img/welcome.webp" alt="" aria-hidden="true">
     <div class="logo hidden" id="w-logo">⛰️</div>
     <h1>Wie viel spart dein Freizeitticket wirklich?</h1>
@@ -25,6 +34,7 @@ export function renderWelcome(root) {
   const illu = root.querySelector(".onb-illu");
   illu.onerror = () => { illu.remove(); root.querySelector("#w-logo").classList.remove("hidden"); };
   root.querySelector("#w-reg").onclick = () => go("#/register");
+  const wc = root.querySelector("#w-cancel"); if (wc) wc.onclick = cancelExtra;
   root.querySelector("#w-login").onclick = () => go("#/login");
 }
 
@@ -68,7 +78,7 @@ export async function renderRegister(root, onAuthed) {
   };
   let html = "";
   if (draft.step === 0) {
-    html = header("Wie heißt du?", "Dein Name erscheint nur in deinem persönlichen Profil.") + `
+    html = header(addingExtra() ? "Wem gehört das Ticket?" : "Wie heißt du?", addingExtra() ? "Ein weiteres Ticket auf diesem Handy – mit eigenen Besuchen und Statistiken, unabhängig von den anderen." : "Dein Name erscheint nur in deinem persönlichen Profil.") + `
       <label class="field"><span>Vorname</span><input class="input" id="fn" autocomplete="given-name" value="${esc(draft.first_name)}"></label>
       <label class="field"><span>Nachname</span><input class="input" id="ln" autocomplete="family-name" value="${esc(draft.last_name)}"></label>`;
   } else if (draft.step === 1) {

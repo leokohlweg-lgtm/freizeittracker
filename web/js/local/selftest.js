@@ -1,6 +1,6 @@
 // Selbsttest der App-Logik (öffnen: selftest.html)
 import * as E from "./engine.js";
-import { handle, loadCatalog, DB } from "./local.js";
+import { handle, loadCatalog, listTickets, addTicket, switchTicket, removeTicket, activeTicketId } from "./local.js";
 
 const results = [];
 const out = document.getElementById("out");
@@ -146,8 +146,34 @@ async function storeTests() {
   await handle("/api/me", "DELETE");
 }
 
+async function ticketTests() {
+  // Ausgangslage: nur ein Ticket
+  for (const t of listTickets()) if (t.id !== "main") removeTicket(t.id);
+  switchTicket("main");
+  await handle("/api/me", "DELETE");
+  await handle("/api/auth/register", "POST", { first_name: "Anna", last_name: "A", birth_date: "1990-01-01", season_id: "2026-27", purchase_price: "100" });
+  const fac = (await handle("/api/facilities", "GET")).facilities.find((f) => f.n_tariffs > 0 && f.kind === "included");
+  await handle(`/api/facilities/${fac.id}/tariffs`, "POST", { price: "30", label: "Test", age_group: "alle" });
+  await handle("/api/visits", "POST", { facility_id: fac.id, visit_date: "2026-11-01" });
+  const idA = activeTicketId();
+  const idB = addTicket();
+  check("Neues Ticket ist leer", (await handle("/api/me", "GET").catch((e) => e.code)) === "auth");
+  await handle("/api/auth/register", "POST", { first_name: "Ben", last_name: "B", birth_date: "2010-05-05", season_id: "2026-27", purchase_price: "200" });
+  const sB = await handle("/api/stats?season=2026-27", "GET");
+  eq("Ticket B unabhängig (0 Besuche, eigener Preis)", [sB.visits, sB.purchase_price, sB.category_key], [0, 200, "jugend"]);
+  eq("Zwei Tickets aufgelistet", listTickets().filter((t) => t.has_profile).map((t) => t.name).sort(), ["Anna A", "Ben B"]);
+  switchTicket(idA);
+  const sA = await handle("/api/stats?season=2026-27", "GET");
+  eq("Ticket A unverändert", [sA.visits, sA.gross, sA.purchase_price], [1, 30, 100]);
+  switchTicket(idB);
+  const del = await handle("/api/me", "DELETE");
+  eq("Ticket B gelöscht, A wieder aktiv", [del.has_profile, activeTicketId(), listTickets().length], [true, idA, 1]);
+  eq("A nach Löschen von B intakt", (await handle("/api/stats?season=2026-27", "GET")).visits, 1);
+  await handle("/api/me", "DELETE");
+}
+
 (async () => {
-  try { engineTests(); await storeTests(); }
+  try { engineTests(); await storeTests(); await ticketTests(); }
   catch (e) { check("Unerwarteter Fehler", false, e.message + "\n" + e.stack); }
   const bad = results.filter((r) => !r.ok);
   document.getElementById("sum").textContent = bad.length ? `${bad.length} von ${results.length} Tests fehlgeschlagen` : `Alle ${results.length} Tests bestanden ✓`;

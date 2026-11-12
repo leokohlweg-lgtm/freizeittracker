@@ -52,20 +52,92 @@ export async function loadCatalog() {
 export const catalogInfo = () => CAT && { generated_at: CAT.generated_at, facilities: CAT.facilities.length };
 
 // ============================================================ Persönliche Daten
-// Selbsttest (selftest.html) arbeitet in einem eigenen Speicherbereich und berührt keine echten Daten
-const KEY = /selftest/.test(location.pathname) ? "ft:selftest-db" : "ft:local-db";
+// Selbsttest (selftest.html) arbeitet in einem eigenen Speicherbereich und berührt keine echten Daten.
+// Mehrere Tickets auf einem Gerät: jedes Ticket hat einen völlig eigenen Speicherbereich.
+// Das erste Ticket ("main") nutzt den ursprünglichen Schlüssel, damit bestehende Daten erhalten bleiben.
+const BASE_KEY = /selftest/.test(location.pathname) ? "ft:selftest-db" : "ft:local-db";
+const REG_KEY = BASE_KEY + ":tickets";
+const keyFor = (id) => (id === "main" ? BASE_KEY : `${BASE_KEY}:${id}`);
 const empty = () => ({ version: 1, profile: null, seasons: [], visits: [], favorites: [], user_tariffs: [], tariff_status: {}, derived_seasons: {},
   next_id: 1, created_at: E.nowStamp(), last_export_at: null, catalog_seen: null });
-function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) return { ...empty(), ...JSON.parse(raw) }; } catch { /* privat */ }
+function loadReg() {
+  try { const r = JSON.parse(localStorage.getItem(REG_KEY)); if (r && Array.isArray(r.list) && r.list.length) return r; } catch { /* */ }
+  return { active: "main", list: [{ id: "main" }] };
+}
+let REG = loadReg();
+if (!REG.list.some((t) => t.id === REG.active)) REG.active = REG.list[0].id;
+const saveReg = () => { try { localStorage.setItem(REG_KEY, JSON.stringify(REG)); } catch { /* */ } };
+function loadKey(key) {
+  try { const raw = localStorage.getItem(key); if (raw) return { ...empty(), ...JSON.parse(raw) }; } catch { /* privat */ }
   return empty();
 }
+const load = () => loadKey(keyFor(REG.active));
 export let DB = load();
 export function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(DB)); }
+  try { localStorage.setItem(keyFor(REG.active), JSON.stringify(DB)); }
   catch (e) { fail(507, "storage", "Speicher voll oder gesperrt – bitte eine Sicherung exportieren"); }
 }
 export const hasProfile = () => !!DB.profile;
+export const activeTicketId = () => REG.active;
+
+// ------------------------------------------------------------ Tickets verwalten
+export function listTickets() {
+  return REG.list.map((t) => {
+    const db = t.id === REG.active ? DB : loadKey(keyFor(t.id));
+    const p = db.profile;
+    const sid = p?.active_season_id || db.seasons[0]?.season_id;
+    const us = db.seasons.find((s) => s.season_id === sid);
+    const season = sid && (CAT?.seasons || []).find((s) => s.id === sid);
+    const cat = us && season ? season.categories.find((c) => c.key === us.category_key) : null;
+    const vs = db.visits.filter((v) => v.season_id === sid);
+    return {
+      id: t.id, active: t.id === REG.active, has_profile: !!p,
+      name: p ? `${p.first_name} ${p.last_name}` : "Neues Ticket", initials: p ? (p.first_name[0] || "") + (p.last_name[0] || "") : "+",
+      season_label: sid ? E.seasonLabel(sid) : null, category_label: cat?.label || null,
+      saving: E.round2(vs.reduce((s, v) => s + v.saving, 0)), visits: vs.length, purchase_price: us?.purchase_price ?? null,
+    };
+  });
+}
+export function switchTicket(id) {
+  if (!REG.list.some((t) => t.id === id)) return false;
+  REG.active = id;
+  saveReg();
+  DB = load();
+  return true;
+}
+export function addTicket() {
+  // ein bereits angelegtes, noch leeres Ticket wiederverwenden
+  const blank = REG.list.find((t) => !loadKey(keyFor(t.id)).profile);
+  if (blank) return switchTicket(blank.id), blank.id;
+  const id = "t" + Date.now().toString(36);
+  REG.list.push({ id, created: E.nowStamp() });
+  switchTicket(id);
+  DB = empty();
+  DB.catalog_seen = CAT?.generated_at || null;
+  save();
+  return id;
+}
+export function removeTicket(id) {
+  try {
+    localStorage.removeItem(keyFor(id));
+    Object.keys(localStorage).filter((k) => k.startsWith(`ft:seen-gross:${id}:`)).forEach((k) => localStorage.removeItem(k));
+  } catch { /* */ }
+  REG.list = REG.list.filter((t) => t.id !== id);
+  if (!REG.list.length) REG.list = [{ id: "main" }];
+  if (REG.active === id || !REG.list.some((t) => t.id === REG.active)) {
+    // bevorzugt ein Ticket mit Profil aktivieren
+    const next = REG.list.find((t) => loadKey(keyFor(t.id)).profile) || REG.list[0];
+    REG.active = next.id;
+  }
+  saveReg();
+  DB = load();
+}
+// Anlegen eines weiteren Tickets abbrechen (leeres Ticket verwerfen, zurück zum vorherigen)
+export function cancelNewTicket() {
+  if (DB.profile || REG.list.length < 2) return false;
+  removeTicket(REG.active);
+  return true;
+}
 // Browser bitten, die Daten nicht automatisch zu löschen
 export const requestPersist = () => navigator.storage?.persist?.().catch(() => false);
 
@@ -458,11 +530,16 @@ on("PUT", "/api/me", (m, q, b) => {
   return { user: publicUser() };
 });
 on("DELETE", "/api/me", () => {
+  // nur das aktive Ticket löschen; gibt es weitere, wird eines davon aktiv
+  if (REG.list.length > 1) {
+    removeTicket(REG.active);
+    return { ok: true, remaining: REG.list.length, has_profile: !!DB.profile };
+  }
   const keep = DB.catalog_seen;
   DB = empty();
   DB.catalog_seen = keep;
   save();
-  return { ok: true };
+  return { ok: true, remaining: 1, has_profile: false };
 });
 on("POST", "/api/me/seasons", (m, q, b) => {
   const sid = b.season_id || "";

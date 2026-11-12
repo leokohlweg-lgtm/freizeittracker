@@ -3,6 +3,8 @@ import { api } from "../api.js";
 import { S, activeSeason, go, loadFacilities } from "../state.js";
 import { ring, animateRings } from "../charts.js";
 import { openSearch, openVisitSheet } from "../sheets.js";
+import { openTicketSwitcher } from "./tickets.js";
+import { listTickets, activeTicketId } from "../local/local.js";
 import { esc, fmtEUR, fmtNum, fmtSigned, fmtDate, relDate, catIcon, I, countUp, seasonLabel, CAT, cat, store } from "../util.js";
 
 export function visitRow(v) {
@@ -17,17 +19,18 @@ export async function renderHome(root) {
   root.innerHTML = `<div class="view with-dock"><div class="topbar"><div class="greeting">${greet()}<b>${esc(u.first_name)}</b></div>
     <button class="avatar" id="h-av" aria-label="Profil">${esc((u.first_name[0] || "") + (u.last_name[0] || ""))}</button></div>
     <div class="skeleton" style="height:250px;border-radius:28px"></div><div class="kpis">${'<div class="skeleton" style="height:86px"></div>'.repeat(4)}</div></div>`;
-  root.querySelector("#h-av").onclick = () => go("#/profile");
+  root.querySelector("#h-av").onclick = () => openTicketSwitcher();
   let st;
   try { st = await api(`/api/stats?season=${sid}`); }
   catch (e) { root.querySelector(".view").insertAdjacentHTML("beforeend", `<div class="empty">${esc(e.message)}</div>`); return; }
   const amort = !!st.amortized_on;
+  const nTickets = listTickets().filter((t) => t.has_profile).length;
   const pct = Math.round(st.progress_raw * 100);
   const isCurrent = st.season.id === sid;
   root.innerHTML = `<div class="view with-dock">
     <div class="topbar"><div class="greeting">${greet()}<b>${esc(u.first_name)}</b></div>
       <div class="row"><button class="chip" id="h-season" aria-label="Saison wechseln">${I.calendar(15)} ${esc(st.season.label)}</button>
-      <button class="avatar" id="h-av" aria-label="Profil">${esc((u.first_name[0] || "") + (u.last_name[0] || ""))}</button></div></div>
+      <button class="avatar ticket-switch" id="h-av" aria-label="${esc(`Ticket von ${u.first_name} – Ticket wechseln${nTickets > 1 ? ` (${nTickets} Tickets)` : ""}`)}">${esc((u.first_name[0] || "") + (u.last_name[0] || ""))}${nTickets > 1 ? `<span class="tk-badge">${nTickets}</span>` : ""}</button></div></div>
     ${st.__offline ? `<div class="warn" style="margin-bottom:12px">${I.warn()}<div>Offline – angezeigt werden die zuletzt synchronisierten Daten.</div></div>` : ""}
     <section class="hero" aria-label="Deine Gesamtersparnis">
       <div class="hero-bg" aria-hidden="true"></div>
@@ -69,13 +72,13 @@ export async function renderHome(root) {
     <button class="searchbar" id="h-search">${I.search(20)}<span class="ph">Was hast du besucht?</span><span class="plus">${I.plus(18)}</span></button>
   </div></div>`;
   // von der zuletzt gesehenen Ersparnis hochzählen (nach einem neuen Besuch sieht man den Zuwachs)
-  const seenKey = "seen-gross:" + st.season.id;
+  const seenKey = `seen-gross:${activeTicketId()}:${st.season.id}`;
   const prev = store.get(seenKey, 0);
   countUp(root.querySelector("#h-amt"), st.gross, { from: prev > st.gross ? 0 : prev, dur: prev && prev !== st.gross ? 1400 : 1100 });
   store.set(seenKey, st.gross);
   animateRings(root);
   requestAnimationFrame(() => setTimeout(() => (root.querySelector("#h-bar").style.width = Math.min(100, pct) + "%"), 40));
-  root.querySelector("#h-av").onclick = () => go("#/profile");
+  root.querySelector("#h-av").onclick = () => openTicketSwitcher();
   root.querySelector("#h-season").onclick = () => go("#/profile");
   root.querySelector("#h-search").onclick = () => openSearch();
   root.querySelector("#q-map").onclick = () => go("#/map");

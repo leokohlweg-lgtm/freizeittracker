@@ -488,3 +488,9 @@ textarea.input { height: 84px; padding: 12px 14px; resize: vertical; }
 
 /* Toasts federn */
 .toast { animation: toastIn .5s var(--spring); }
+
+/* Mehrere Tickets */
+.ticket-switch { position: relative; }
+.tk-badge { position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #15803d;
+  color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+.ticket-row.on { background: var(--green-soft); }

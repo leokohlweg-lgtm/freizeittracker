@@ -1,6 +1,7 @@
 // Profil, Saisonen, Darstellung, Daten, Preisdatenbank, Prüfprozess
 import { api } from "../api.js";
-import { loadCatalog } from "../local/local.js";
+import { loadCatalog, listTickets } from "../local/local.js";
+import { ticketRows, activateTicket, startNewTicket } from "./tickets.js";
 import { trackEvent, statsAvailable, statsAllowed, setStatsAllowed } from "../analytics.js";
 import { S, activeSeason, go, refreshUser, setTheme, invalidate } from "../state.js";
 import { openFacility, facilityRow } from "../sheets.js";
@@ -19,6 +20,10 @@ export async function renderProfile(root) {
       <div class="grow"><div style="font-size:22px;font-weight:800">${esc(u.first_name)} ${esc(u.last_name)}</div>
       <div class="small muted">Geboren ${esc(fmtDate(u.birth_date))}</div><div class="small muted">🔒 Daten nur auf diesem Gerät</div></div></div>
     ${exportWarning(status)}
+
+    <div class="section"><div class="section-head"><h2>Tickets auf diesem Handy</h2><button id="p-addticket">+ Ticket</button></div>
+      <div class="list">${ticketRows(listTickets())}</div>
+      <p class="tiny muted" style="margin:8px 4px 0">Jedes Ticket hat eigene Besuche, Statistiken und Sicherungen – unabhängig voneinander. Alles unten bezieht sich auf das aktive Ticket.</p></div>
 
     <div class="section"><div class="section-head"><h2>Freizeitticket</h2><button id="p-addseason">+ Saison</button></div>
       <div class="list">${u.seasons.map((s) => `<div class="item" style="align-items:flex-start"><span class="ic" style="background:${s.season_id === act ? "var(--green-2)" : "var(--surface-3)"};color:${s.season_id === act ? "#fff" : "var(--text-2)"}">🎟️</span>
@@ -72,7 +77,7 @@ export async function renderProfile(root) {
       ${statsAvailable() ? `<label class="card row between" style="gap:12px;margin-top:14px"><div><div style="font-weight:600">Anonyme Nutzungsstatistik</div><div class="small muted">Hilft, die App zu verbessern</div></div>
         <span class="toggle"><input type="checkbox" id="p-stats" ${statsAllowed() ? "checked" : ""}><i></i></span></label>` : ""}
       <div class="list" style="margin-top:14px">
-        <button class="item" id="p-del"><span class="ic" style="background:#ff3b30">${I.trash(18)}</span><div class="grow"><div class="t" style="color:var(--red)">Alle Daten löschen</div><div class="s">Profil und Besuche von diesem Gerät entfernen</div></div></button>
+        <button class="item" id="p-del"><span class="ic" style="background:#ff3b30">${I.trash(18)}</span><div class="grow"><div class="t" style="color:var(--red)">${listTickets().length > 1 ? "Dieses Ticket löschen" : "Alle Daten löschen"}</div><div class="s">Profil und Besuche von ${esc(u.first_name)} von diesem Gerät entfernen</div></div></button>
       </div>
       <p class="tiny muted center" style="margin-top:18px">FreizeitTracker · Datenquelle: freizeitticket.at und offizielle Websites der Partnerbetriebe.<br>Unabhängiges Projekt – keine Gewähr für Preisangaben.</p></div>
   </div>`;
@@ -100,6 +105,8 @@ export async function renderProfile(root) {
     try { await api(`/api/me/seasons/${sid}`, { method: "DELETE", body: { confirm: true } }); reload(); } catch (err) { toast(err.message); }
   }));
   root.querySelector("#p-addseason").onclick = () => addSeasonSheet(reload);
+  root.querySelector("#p-addticket").onclick = () => startNewTicket();
+  root.querySelectorAll("[data-ticket]").forEach((b) => (b.onclick = () => { if (!b.classList.contains("on")) activateTicket(b.dataset.ticket); }));
   const upd = root.querySelector("#p-update");
   if (upd) upd.onclick = async () => {
     upd.innerHTML = `<span class="spin" style="width:15px;height:15px;border-width:2px"></span>`;
@@ -125,13 +132,13 @@ export async function renderProfile(root) {
   const ps = root.querySelector("#p-stats");
   if (ps) ps.onchange = () => { setStatsAllowed(ps.checked); toast(ps.checked ? "Anonyme Statistik eingeschaltet" : "Anonyme Statistik ausgeschaltet"); };
   root.querySelector("#p-del").onclick = async () => {
-    const ok = await dialog({ title: "Alle Daten löschen?", text: `Profil, ${status?.visits ?? 0} Besuche und eigene Preise werden von diesem Gerät entfernt. Das kann nicht rückgängig gemacht werden – exportiere vorher eine Sicherung, wenn du sie behalten willst.`,
+    const ok = await dialog({ title: `Ticket von ${u.first_name} löschen?`, text: `Profil, ${status?.visits ?? 0} Besuche und eigene Preise werden von diesem Gerät entfernt. Das kann nicht rückgängig gemacht werden – exportiere vorher eine Sicherung, wenn du sie behalten willst.`,
       buttons: [{ label: "Endgültig löschen", value: true, cls: "danger" }, { label: "Abbrechen", value: false }] });
     if (!ok) return;
-    await api("/api/me", { method: "DELETE" });
-    S.user = null;
-    toast("Alle Daten gelöscht");
-    go("#/welcome");
+    const r = await api("/api/me", { method: "DELETE" });
+    invalidate();
+    if (r.has_profile) { await refreshUser(); toast(`Gelöscht – jetzt aktiv: Ticket von ${S.user.first_name}`); go("#/home"); }
+    else { S.user = null; toast("Daten gelöscht"); go("#/welcome"); }
   };
 }
 
