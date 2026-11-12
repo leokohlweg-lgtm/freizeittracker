@@ -1,5 +1,6 @@
 // Suche, Besuch erfassen/bearbeiten, Einrichtungsdetails
 import { api } from "./api.js";
+import { trackEvent } from "./analytics.js";
 import { S, loadFacilities, invalidate, go, refreshUser } from "./state.js";
 import {
   esc, fmtEUR, fmtDate, relDate, todayISO, addDays, norm, debounce, uid, cat, catIcon, I, CAT, SEARCH_ALIASES,
@@ -286,6 +287,7 @@ export function openVisitSheet({ facility, visit = null, date = null, onDone = n
       haptic(15);
       await new Promise((r) => setTimeout(r, 520));
       sheet.close();
+      if (!visit) trackEvent("besuch-erfasst", facility.category);
       toast(visit ? "Besuch aktualisiert" : `+${fmtEUR(v.saving)} gespart`);
       if (v.amortized_now) {
         confetti();

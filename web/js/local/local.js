@@ -605,7 +605,7 @@ on("GET", "/api/status", () => {
       with_prices: c((f) => f.price_status === "ok"), unreachable: c((f) => ["stale", "unreachable", "blocked"].includes(f.price_status)),
       not_found: c((f) => f.price_status === "not_found"), pending: c((f) => f.price_status === "pending"), review: 0,
       geocoded: c((f) => f.lat != null), tariffs: CAT.tariffs.length, tariffs_archived: (CAT.history || []).length },
-    jobs: CAT.jobs || [], log: (CAT.log || []).slice(0, 40), generated_at: CAT.generated_at, pdf_support: true,
+    jobs: (CAT.jobs || []).filter((j) => j.name === "partner_sync" || j.name === "price_crawl"), log: (CAT.log || []).slice(0, 40), generated_at: CAT.generated_at, pdf_support: true,
     own_prices: DB.user_tariffs.length, last_export_at: DB.last_export_at, visits: DB.visits.length,
   };
 });

@@ -2,6 +2,7 @@
 import { S, refreshUser, applyTheme, loadFacilities } from "./state.js";
 import { loadCatalog, hasProfile, requestPersist } from "./local/local.js";
 import { I, esc, toast, closeAllSheets, fmtDate, stagger } from "./util.js";
+import { trackView, trackEvent } from "./analytics.js";
 import { renderWelcome, renderLogin, renderRegister } from "./views/onboarding.js";
 import { renderHome } from "./views/home.js";
 import { renderVisits } from "./views/visits.js";
@@ -51,6 +52,7 @@ async function route() {
   try {
     await renderRoute(path, sub, authed);
     stagger(app.querySelector(".view"));
+    trackView(path);
   } catch (e) {
     console.error(e);
     if (e.status === 401) { S.user = null; location.replace("#/welcome"); return; }
@@ -88,6 +90,7 @@ async function boot() {
   if (hasProfile()) {
     try { await refreshUser(); requestPersist(); } catch { S.user = null; }
   }
+  trackEvent("app-start", hasProfile() ? "mit-profil" : "neu");
   window.addEventListener("hashchange", route);
   route();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

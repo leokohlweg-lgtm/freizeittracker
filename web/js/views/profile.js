@@ -1,6 +1,7 @@
 // Profil, Saisonen, Darstellung, Daten, Preisdatenbank, Prüfprozess
 import { api } from "../api.js";
 import { loadCatalog } from "../local/local.js";
+import { trackEvent, statsAvailable, statsAllowed, setStatsAllowed } from "../analytics.js";
 import { S, activeSeason, go, refreshUser, setTheme, invalidate } from "../state.js";
 import { openFacility, facilityRow } from "../sheets.js";
 import { esc, fmtEUR, fmtDate, seasonLabel, todayISO, seasonOf, I, toast, confirmDlg, dialog, download, store, openSheet } from "../util.js";
@@ -66,7 +67,10 @@ export async function renderProfile(root) {
       </div></div>
 
     <div class="section"><div class="section-head"><h2>Datenschutz</h2></div>
-      <div class="card small muted">Alle persönlichen Daten (Name, Geburtsdatum, Besuche) werden ausschließlich auf diesem Gerät gespeichert. Aus dem Internet geladen werden nur der öffentliche Preiskatalog und Kartenbilder.</div>
+      <div class="card small muted">Alle persönlichen Daten (Name, Geburtsdatum, Besuche) werden ausschließlich auf diesem Gerät gespeichert. Aus dem Internet geladen werden nur der öffentliche Preiskatalog und Kartenbilder.
+        ${statsAvailable() ? `<br><br>Damit der Entwickler sieht, wie viele Leute die App nutzen, wird anonym gezählt, welche Ansichten geöffnet und wie viele Besuche erfasst werden (nur die Kategorie, z. B. „Skigebiet“). Keine Cookies, kein Name, keine Einrichtung, kein Betrag – über GoatCounter.` : ""}</div>
+      ${statsAvailable() ? `<label class="card row between" style="gap:12px;margin-top:14px"><div><div style="font-weight:600">Anonyme Nutzungsstatistik</div><div class="small muted">Hilft, die App zu verbessern</div></div>
+        <span class="toggle"><input type="checkbox" id="p-stats" ${statsAllowed() ? "checked" : ""}><i></i></span></label>` : ""}
       <div class="list" style="margin-top:14px">
         <button class="item" id="p-del"><span class="ic" style="background:#ff3b30">${I.trash(18)}</span><div class="grow"><div class="t" style="color:var(--red)">Alle Daten löschen</div><div class="s">Profil und Besuche von diesem Gerät entfernen</div></div></button>
       </div>
@@ -118,6 +122,8 @@ export async function renderProfile(root) {
       toast(`${r.created} Besuche importiert, ${r.skipped} übersprungen`); invalidate(); reload();
     } catch (err) { toast(err.message || "Import fehlgeschlagen"); }
   };
+  const ps = root.querySelector("#p-stats");
+  if (ps) ps.onchange = () => { setStatsAllowed(ps.checked); toast(ps.checked ? "Anonyme Statistik eingeschaltet" : "Anonyme Statistik ausgeschaltet"); };
   root.querySelector("#p-del").onclick = async () => {
     const ok = await dialog({ title: "Alle Daten löschen?", text: `Profil, ${status?.visits ?? 0} Besuche und eigene Preise werden von diesem Gerät entfernt. Das kann nicht rückgängig gemacht werden – exportiere vorher eine Sicherung, wenn du sie behalten willst.`,
       buttons: [{ label: "Endgültig löschen", value: true, cls: "danger" }, { label: "Abbrechen", value: false }] });
@@ -144,6 +150,7 @@ function exportWarning(status) {
 async function exp(fmt) {
   try {
     const f = await api(`/api/export?format=${fmt}`);
+    trackEvent("export", fmt);
     const blob = new Blob([f.data], { type: f.type });
     // Am Handy: Teilen-Menü (in Dateien sichern, per Mail senden …), sonst Download
     const file = typeof File === "function" ? new File([blob], f.name, { type: f.type }) : null;

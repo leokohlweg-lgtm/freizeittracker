@@ -2,6 +2,7 @@
 import { api } from "../api.js";
 import { S, go } from "../state.js";
 import { esc, fmtEUR, seasonLabel, todayISO, seasonOf, toast } from "../util.js";
+import { trackEvent } from "../analytics.js";
 
 const draft = { step: 0, first_name: "", last_name: "", birth_date: "", disability: false, season_id: null, purchase_price: "" };
 
@@ -43,6 +44,7 @@ export function renderLogin(root, onAuthed) {
       const data = JSON.parse(await file.text());
       const r = await api("/api/import", { method: "POST", body: data });
       S.user = (await api("/api/me")).user;
+      trackEvent("sicherung-wiederhergestellt");
       onAuthed();
       setTimeout(() => toast(`${r.created} Besuche wiederhergestellt`), 500);
     } catch (err) { root.querySelector("#err").textContent = err.message || "Datei konnte nicht gelesen werden"; }
@@ -84,7 +86,7 @@ export async function renderRegister(root, onAuthed) {
   } else {
     html = header("Fast geschafft", "Ein paar Dinge, die du wissen solltest:") + `
       <div class="stack">
-        ${[["🔒", "Deine Daten bleiben auf diesem Handy", "Kein Account, kein Login, keine Cloud. Niemand außer dir sieht deine Besuche."],
+        ${[["🔒", "Deine Daten bleiben auf diesem Handy", "Kein Account, kein Login, keine Cloud. Niemand außer dir sieht deine Besuche. Gezählt wird nur anonym, wie oft die App genutzt wird – abschaltbar im Profil."],
            ["🔄", "Preise aktualisieren sich von selbst", "Einmal pro Woche werden alle Partner und Preise automatisch neu recherchiert. Die App lädt sie beim Öffnen."],
            ["💾", "Sicherung nicht vergessen", "Exportiere ab und zu eine Sicherung (Profil → Daten). Damit kannst du alles auf einem neuen Handy wiederherstellen."]]
           .map(([e, t, s]) => `<div class="card row" style="gap:14px;align-items:flex-start"><span style="font-size:26px">${e}</span><div><b>${t}</b><div class="small muted">${s}</div></div></div>`).join("")}
@@ -148,6 +150,7 @@ export async function renderRegister(root, onAuthed) {
         const r = await api("/api/auth/register", { method: "POST", body: { ...draft, step: undefined } });
         S.user = r.user;
         draft.step = 0;
+        trackEvent("profil-angelegt", r.user.seasons[0]?.category_key || "");
         onAuthed(true);
       } catch (e) { err(e.message); }
       return;
