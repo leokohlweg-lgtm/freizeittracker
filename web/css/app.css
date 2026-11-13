@@ -494,3 +494,20 @@ textarea.input { height: 84px; padding: 12px 14px; resize: vertical; }
 .tk-badge { position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: #15803d;
   color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
 .ticket-row.on { background: var(--green-soft); }
+
+/* ---------- App herunterladen (Installation) ---------- */
+.inst-head { display: flex; gap: 14px; align-items: center; margin: 4px 0 16px; }
+.inst-head h2 { font-size: 21px; margin: 0 0 3px; letter-spacing: -0.015em; }
+.inst-head p { margin: 0; color: var(--text-2); font-size: 14.5px; line-height: 1.4; }
+.inst-icon { width: 60px; height: 60px; border-radius: 15px; flex: none; box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.inst-perks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.inst-perks span { background: var(--surface-2, rgba(120,120,128,.12)); border-radius: 99px; padding: 7px 12px; font-size: 13.5px; font-weight: 600; }
+.inst-step { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--sep); }
+.inst-step:first-of-type { border-top: 0; }
+.inst-n { width: 24px; height: 24px; border-radius: 50%; background: var(--green-2); color: #fff; font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: none; }
+.inst-ic { width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2, rgba(120,120,128,.12)); color: var(--blue); display: grid; place-items: center; flex: none; text-align: center; line-height: 1.05; }
+.inst-step > div { font-size: 15.5px; line-height: 1.35; }
+.inst-note { background: var(--amber-soft); color: var(--text); border-radius: 14px; padding: 11px 13px; font-size: 13.5px; line-height: 1.4; margin: 6px 0 14px; }
+.inst-arrow { text-align: center; font-size: 30px; font-weight: 800; color: var(--blue); margin-top: 10px; animation: inst-bob 1.1s ease-in-out infinite; }
+@keyframes inst-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) { .inst-arrow { animation: none; } }

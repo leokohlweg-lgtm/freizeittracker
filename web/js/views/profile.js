@@ -5,6 +5,7 @@ import { ticketRows, activateTicket, startNewTicket } from "./tickets.js";
 import { trackEvent, statsAvailable, statsAllowed, setStatsAllowed } from "../analytics.js";
 import { S, activeSeason, go, refreshUser, setTheme, invalidate } from "../state.js";
 import { openFacility, facilityRow } from "../sheets.js";
+import { canInstall, openInstallSheet } from "../install.js";
 import { esc, fmtEUR, fmtDate, seasonLabel, todayISO, seasonOf, I, toast, confirmDlg, dialog, download, store, openSheet } from "../util.js";
 
 export async function renderProfile(root) {
@@ -49,6 +50,9 @@ export async function renderProfile(root) {
     <div class="section"><div class="section-head"><h2>Darstellung</h2></div>
       <div class="card"><div class="seg" id="p-theme">${[["system", "System"], ["light", "Hell"], ["dark", "Dunkel"]].map(([k, l]) => `<button data-t="${k}" class="${theme === k ? "on" : ""}">${l}</button>`).join("")}</div></div></div>
 
+    ${canInstall() ? `<div class="section"><div class="list"><button class="item" id="p-install"><span class="ic" style="background:var(--green-2)">📲</span>
+      <div class="grow"><div class="t">App auf den Startbildschirm</div><div class="s">Öffnet ohne Browserleiste, auch offline</div></div>${I.chev()}</button></div></div>` : ""}
+
     <div class="section"><div class="section-head"><h2>Preisdatenbank</h2><a href="#/review">Preisprüfung${c.review ? ` (${c.review})` : ""}</a></div>
       ${status ? `<div class="card">
         <div class="kpis" style="margin-top:0;grid-template-columns:1fr 1fr 1fr">
@@ -91,6 +95,7 @@ export async function renderProfile(root) {
       toast("Gespeichert"); reload();
     } catch (err) { toast(err.message); }
   };
+  const pi = root.querySelector("#p-install"); if (pi) pi.onclick = () => openInstallSheet({ hasData: true });
   root.querySelector("#p-theme").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) { setTheme(b.dataset.t); renderProfile(root); } };
   root.querySelectorAll("[data-editprice]").forEach((b) => (b.onclick = async () => {
     const s = u.seasons.find((x) => x.season_id === b.dataset.editprice);

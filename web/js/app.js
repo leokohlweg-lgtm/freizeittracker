@@ -3,6 +3,7 @@ import { S, refreshUser, applyTheme, loadFacilities } from "./state.js";
 import { loadCatalog, hasProfile, requestPersist, listTickets } from "./local/local.js";
 import { I, esc, toast, closeAllSheets, fmtDate, stagger } from "./util.js";
 import { trackView, trackEvent, reportTickets } from "./analytics.js";
+import { offerInstallOnStart } from "./install.js";
 import { renderWelcome, renderLogin, renderRegister } from "./views/onboarding.js";
 import { renderHome } from "./views/home.js";
 import { renderVisits } from "./views/visits.js";
@@ -94,6 +95,7 @@ async function boot() {
   reportTickets(listTickets());
   window.addEventListener("hashchange", route);
   route();
+  offerInstallOnStart({ hasData: hasProfile() });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 }
 
