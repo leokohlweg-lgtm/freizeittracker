@@ -37,3 +37,23 @@ export function trackEvent(name, detail = "") {
   const p = detail ? `${name}/${detail}` : name;
   send(p, p, true);
 }
+
+// Geräte und Freizeittickets einmalig melden (für die Gesamtzahl im Entwickler-Dashboard).
+// - "geraet-angemeldet": einmal pro Gerät, sobald dort mindestens ein Ticket angelegt ist
+// - "ticket-angelegt/<n>": einmal pro Ticket; n zählt je Gerät hoch, damit GoatCounter zwei Tickets
+//   aus derselben Sitzung nicht als eines zählt. Bereits vorhandene Tickets werden beim nächsten Öffnen nachgemeldet.
+export function reportTickets(tickets) {
+  if (!statsAllowed() || !navigator.onLine) return;
+  const own = (tickets || []).filter((t) => t.has_profile);
+  if (!own.length) return;
+  const seen = store.get("reported-tickets", []);
+  let n = store.get("reported-ticket-no", seen.length);
+  if (!store.get("reported-device", false)) { trackEvent("geraet-angemeldet"); store.set("reported-device", true); }
+  for (const t of own) {
+    if (seen.includes(t.id)) continue;
+    seen.push(t.id);
+    trackEvent("ticket-angelegt", String(++n));
+  }
+  store.set("reported-tickets", seen);
+  store.set("reported-ticket-no", n);
+}

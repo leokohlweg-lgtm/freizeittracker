@@ -2,7 +2,7 @@
 import { api } from "../api.js";
 import { S, go } from "../state.js";
 import { esc, fmtEUR, seasonLabel, todayISO, seasonOf, toast } from "../util.js";
-import { trackEvent } from "../analytics.js";
+import { trackEvent, reportTickets } from "../analytics.js";
 import { listTickets, cancelNewTicket } from "../local/local.js";
 
 const draft = { step: 0, first_name: "", last_name: "", birth_date: "", disability: false, season_id: null, purchase_price: "" };
@@ -55,6 +55,7 @@ export function renderLogin(root, onAuthed) {
       const r = await api("/api/import", { method: "POST", body: data });
       S.user = (await api("/api/me")).user;
       trackEvent("sicherung-wiederhergestellt");
+      reportTickets(listTickets());
       onAuthed();
       setTimeout(() => toast(`${r.created} Besuche wiederhergestellt`), 500);
     } catch (err) { root.querySelector("#err").textContent = err.message || "Datei konnte nicht gelesen werden"; }
@@ -161,6 +162,7 @@ export async function renderRegister(root, onAuthed) {
         S.user = r.user;
         draft.step = 0;
         trackEvent("profil-angelegt", r.user.seasons[0]?.category_key || "");
+        reportTickets(listTickets());
         onAuthed(true);
       } catch (e) { err(e.message); }
       return;

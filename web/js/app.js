@@ -1,8 +1,8 @@
 // FreizeitTracker – Einstieg, Routing, Navigation (läuft komplett auf dem Gerät)
 import { S, refreshUser, applyTheme, loadFacilities } from "./state.js";
-import { loadCatalog, hasProfile, requestPersist } from "./local/local.js";
+import { loadCatalog, hasProfile, requestPersist, listTickets } from "./local/local.js";
 import { I, esc, toast, closeAllSheets, fmtDate, stagger } from "./util.js";
-import { trackView, trackEvent } from "./analytics.js";
+import { trackView, trackEvent, reportTickets } from "./analytics.js";
 import { renderWelcome, renderLogin, renderRegister } from "./views/onboarding.js";
 import { renderHome } from "./views/home.js";
 import { renderVisits } from "./views/visits.js";
@@ -91,6 +91,7 @@ async function boot() {
     try { await refreshUser(); requestPersist(); } catch { S.user = null; }
   }
   trackEvent("app-start", hasProfile() ? "mit-profil" : "neu");
+  reportTickets(listTickets());
   window.addEventListener("hashchange", route);
   route();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

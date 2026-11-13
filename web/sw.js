@@ -1,5 +1,5 @@
 // Service Worker: App + Preiskatalog offline verfügbar (Netzwerk zuerst, sonst Cache)
-const CACHE = "ft-local-v3";
+const CACHE = "ft-local-v4";
 const SHELL = ["./", "index.html", "css/app.css", "js/app.js", "js/api.js", "js/util.js", "js/state.js", "js/charts.js", "js/sheets.js",
   "js/local/engine.js", "js/local/local.js", "js/views/home.js", "js/views/visits.js", "js/views/stats.js", "js/views/profile.js",
   "js/views/onboarding.js", "js/views/map.js", "js/views/wrapped.js", "js/analytics.js", "js/views/tickets.js", "data/catalog.json", "icon.svg", "icon-180.png", "icon-192.png",
